@@ -1,24 +1,32 @@
-# Exercise - Rollback
-AWSTemplateFormatVersion: 2010-09-09
-Description: ND9991 C3 L4 
+Parameters:
+# Existing Bucket name
+PipelineID:
+  Description: Existing Bucket name
+  Type: String
 Resources:
-  EC2Instance:
-    Type: 'AWS::EC2::Instance'
-    Properties:
-      SecurityGroups:
-        - !Ref InstanceSecurityGroup
-      # Change this, as applicable to you      
-      KeyName: ramez
-      # Change this, as applicable to you
-      # You may need to find out what instance types are available in your region - use https://cloud-images.ubuntu.com/locator/ec2/
-      ImageId: 'ami-09cd747c78a9add63' 
-      InstanceType: t3.micro
-  InstanceSecurityGroup:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: Enable SSH access via port 22
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
-          CidrIp: 0.0.0.0/0 
+    CloudFrontOriginAccessIdentity:
+      Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: Origin Access Identity for Serverless Static Website
+    WebpageCDN:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: !Sub "${PipelineID}.s3.amazonaws.com"
+              Id: webpage
+              S3OriginConfig:
+                OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
+          Enabled: True
+          DefaultRootObject: index.html
+          DefaultCacheBehavior:
+            ForwardedValues:
+              QueryString: False
+            TargetOriginId: webpage
+            ViewerProtocolPolicy: allow-all
+  Outputs:
+    PipelineID:
+      Value: !Sub ${PipelineID}
+      Export:
+        Name: PipelineID
